@@ -7,16 +7,18 @@ const fetchUserAddress = async (req, res) => {
         let whereConditions = [];
 
         if (UserId) {
-            whereConditions.push(`UserId = ${setSQLStringValue(UserId)}`);
+            whereConditions.push(`ua.UserId = ${setSQLStringValue(UserId)}`);
         }
 
         if (AddressType) {
-            whereConditions.push(`AddressType = ${setSQLStringValue(AddressType)}`);
+            whereConditions.push(`ua.AddressType = ${setSQLStringValue(AddressType)}`);
         }
 
         const whereString = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
         const getUserAddressList = {
-            getQuery: `SELECT * FROM tbl_user_address ${whereString} ORDER BY UserAddressId DESC`,
+            getQuery: `SELECT ua.*, us.FullName, us.RegisterEmail, us.UserName FROM tbl_user_address ua
+                       LEFT JOIN tbl_users us ON us.UserId = ua.UserId 
+                       ${whereString} ORDER BY ua.UserAddressId DESC`,
             countQuery: `SELECT COUNT(*) AS totalCount FROM tbl_user_address ${whereString}`,
         };
         const result = await getCommonAPIResponse(req, res, getUserAddressList);
