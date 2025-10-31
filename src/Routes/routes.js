@@ -5,6 +5,7 @@ const UserController = require('../controllers/tbl_users');
 const UserAddressController = require('../controllers/tbl_user_address');
 const ProductCategoryController = require('../controllers/tbl_product_category');
 const ProductSubCategoryController = require('../controllers/tbl_product_sub_category');
+const ProductsTagController = require('../controllers/tbl_products_tag');
 const auth = require("../middleware/auth");
 
 const { UserUpload } = require('../upload/index');
@@ -52,5 +53,11 @@ router.put("/product_sub_category/update", ProductSubCategoryController.updatePr
 router.delete("/product_sub_category/delete", ProductSubCategoryController.deleteProductSubCategory)
 //#endregion
 
+//#region products tag master
+router.get("/products_tag/list", ProductsTagController.fetchProductsTag)
+router.post("/products_tag/create", ProductsTagController.createProductsTag)
+router.put("/products_tag/update", ProductsTagController.updateProductsTag)
+router.delete("/products_tag/delete", ProductsTagController.deleteProductsTag)
+//#endregion
 
 module.exports = router;
