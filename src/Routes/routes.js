@@ -4,6 +4,7 @@ const AdminController = require('../controllers/tbl_admin');
 const UserController = require('../controllers/tbl_users');
 const UserAddressController = require('../controllers/tbl_user_address');
 const ProductCategoryController = require('../controllers/tbl_product_category');
+const ProductSubCategoryController = require('../controllers/tbl_product_sub_category');
 const auth = require("../middleware/auth");
 
 const { UserUpload } = require('../upload/index');
@@ -42,6 +43,13 @@ router.get("/product_category/list", ProductCategoryController.fetchProductCateg
 router.post("/product_category/create", ProductCategoryController.createProductCategory)
 router.put("/product_category/update", ProductCategoryController.updateProductCategory)
 router.delete("/product_category/delete", ProductCategoryController.deleteProductCategory)
+//#endregion
+
+//#region product sub category master
+router.get("/product_sub_category/list", ProductSubCategoryController.fetchProductSubCategory)
+router.post("/product_sub_category/create", ProductSubCategoryController.createProductSubCategory)
+router.put("/product_sub_category/update", ProductSubCategoryController.updateProductSubCategory)
+router.delete("/product_sub_category/delete", ProductSubCategoryController.deleteProductSubCategory)
 //#endregion
 
 
