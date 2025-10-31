@@ -288,6 +288,19 @@ const CarouselUpload = multer({ storage: CarouselStorage }).fields([
     { name: 'Image', maxCount: 1 },
 ]);
 
+const BrandStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, `./media/Brand`);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '_' + file.originalname);
+    }
+});
+
+const BrandUpload = multer({ storage: BrandStorage }).fields([
+    { name: 'Image', maxCount: 1 },
+]);
+
 
 module.exports = {
     SpeakerUpload,
@@ -308,5 +321,6 @@ module.exports = {
     CanvasJsonFileUpload,
     CanvasSeatingFileUpload,
     SavedCanvasSeatingFileUpload,
-    CarouselUpload
+    CarouselUpload,
+    BrandUpload
 };

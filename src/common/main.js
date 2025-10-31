@@ -172,25 +172,45 @@ const generateSixDigitCode = () => {
 // Function to safely delete a file
 const safeUnlink = (filePath) => {
     return new Promise((resolve, reject) => {
-        // Proceed only if the file contains 'static'
-        if (filePath.match('static')?.length > 0) {
-            return null
+        // Check if filePath is valid
+        if (!filePath) {
+            return resolve('No file path provided');
         }
 
-        fs.access(filePath, fs.constants.W_OK, (err) => {
+        // Proceed only if the file does NOT contain 'static'
+        if (filePath.includes('static')) {
+            console.log(`Skipping deletion of static file: ${filePath}`);
+            return resolve('Skipped static file');
+        }
+
+        fs.access(filePath, fs.constants.F_OK, (err) => {
+            // If file doesn't exist, just resolve
             if (err) {
-                return reject(`No write access to file: ${filePath}, error: ${err.message}`);
+                console.log(`File does not exist: ${filePath}`);
+                return resolve('File does not exist');
             }
-            fs.unlink(filePath, (unlinkErr) => {
-                if (unlinkErr) {
-                    return reject(`Error deleting file: ${filePath}, error: ${unlinkErr.message}`);
+
+            // Check write access
+            fs.access(filePath, fs.constants.W_OK, (accessErr) => {
+                if (accessErr) {
+                    console.log(`No write access to file: ${filePath}, error: ${accessErr.message}`);
+                    return resolve('No write access'); // Resolve instead of reject to avoid crashing
                 }
-                console.log(`Deleted file: ${filePath}`);
-                resolve();
+
+                // Delete the file
+                fs.unlink(filePath, (unlinkErr) => {
+                    if (unlinkErr) {
+                        console.log(`Error deleting file: ${filePath}, error: ${unlinkErr.message}`);
+                        return resolve('Delete failed'); // Resolve instead of reject
+                    }
+                    console.log(`Successfully deleted file: ${filePath}`);
+                    resolve('File deleted successfully');
+                });
             });
         });
     });
 };
+
 const updateUploadFiles = (updateFile, previousFile, folderName) => {
     if (updateFile && updateFile[0] && updateFile[0]?.filename) {
         if (previousFile) {

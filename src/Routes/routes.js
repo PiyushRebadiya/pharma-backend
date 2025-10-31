@@ -8,9 +8,10 @@ const ProductSubCategoryController = require('../controllers/tbl_product_sub_cat
 const ProductsTagController = require('../controllers/tbl_products_tag');
 const ProductsReviewController = require('../controllers/tbl_products_review');
 const CarouselController = require('../controllers/tbl_carousel');
+const BrandController = require('../controllers/tbl_brand');
 const auth = require("../middleware/auth");
 
-const { UserUpload, CarouselUpload } = require('../upload/index');
+const { UserUpload, CarouselUpload, BrandUpload } = require('../upload/index');
 
 //#region User Master
 router.get("/fetchUserMaster", auth, UserMasterController.fetchUserMaster)
@@ -75,4 +76,12 @@ router.post("/carousel/create", CarouselUpload, CarouselController.createCarouse
 router.put("/carousel/update", CarouselUpload, CarouselController.updateCarousel)
 router.delete("/carousel/delete", CarouselController.deleteCarousel)
 //#endregion
+
+//#region brand master
+router.get("/brand/list", BrandController.fetchBrand)
+router.post("/brand/create", BrandUpload, BrandController.createBrand)
+router.put("/brand/update", BrandUpload, BrandController.updateBrand)
+router.delete("/brand/delete", BrandController.deleteBrand)
+//#endregion
+
 module.exports = router;
