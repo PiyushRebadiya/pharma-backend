@@ -7,16 +7,18 @@ const fetchProductSubCategory = async (req, res) => {
         let whereConditions = [];
 
         if (Status && setSQLBooleanValue(Status)) {
-            whereConditions.push(`Status = ${setSQLBooleanValue(Status)}`);
+            whereConditions.push(`psc.Status = ${setSQLBooleanValue(Status)}`);
         }
 
         if (ProductCatId) {
-            whereConditions.push(`ProductCatId = ${setSQLStringValue(ProductCatId)}`);
+            whereConditions.push(`psc.ProductCatId = ${setSQLStringValue(ProductCatId)}`);
         }
 
         const whereString = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
         const getProductSubCategoryList = {
-            getQuery: `SELECT * FROM tbl_product_sub_category ${whereString} ORDER BY EntryDate DESC`,
+            getQuery: `SELECT psc.*, pc.Title As ProductCatTitle FROM tbl_product_sub_category psc
+                       LEFT JOIN tbl_product_category pc ON pc.ProductCatId = psc.ProductCatId 
+                       ${whereString} ORDER BY psc.EntryDate DESC`,
             countQuery: `SELECT COUNT(*) AS totalCount FROM tbl_product_sub_category ${whereString}`,
         };
         const result = await getCommonAPIResponse(req, res, getProductSubCategoryList);
