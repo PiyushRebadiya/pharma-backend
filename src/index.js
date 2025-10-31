@@ -35,6 +35,7 @@ app.use((req, res, next) => {
 // app.use('/', express.static(`./media/carousel`));
 
 app.use('/', express.static(`./media/Static`));
+app.use('/', express.static(`./`));
 
 app.use("/", routes);
 
