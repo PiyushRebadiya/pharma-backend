@@ -59,6 +59,7 @@ const createProduct = async (req, res) => {
         MainDecription2,
         Quantity,
         ProductTag,
+        ProductTagTitle,
         ProductCatId,
         ProductCatTitle,
         ProductSubCatId,
@@ -93,7 +94,7 @@ const createProduct = async (req, res) => {
         const insertProductQuery = `
             INSERT INTO tbl_products (
                 Title, OriginalPrice, HighPrice, ShortDecription, MainDecription1, 
-                MainDecription2, Quantity, ProductTag, ProductCatId, ProductCatTitle, 
+                MainDecription2, Quantity, ProductTag, ProductTagTitle, ProductCatId, ProductCatTitle, 
                 ProductSubCatId, ProductSubCatTitle, BrandId, BrandTitle, Combo, 
                 Tranding, OrderId, CommonBulkId, Status
             ) VALUES (
@@ -105,6 +106,7 @@ const createProduct = async (req, res) => {
                 ${setSQLStringValue(MainDecription2)},
                 ${setSQLStringValue(Quantity)},
                 ${setSQLStringValue(ProductTag)},
+                ${setSQLStringValue(ProductTagTitle)},
                 ${setSQLStringValue(ProductCatId)},
                 ${setSQLStringValue(ProductCatTitle)},
                 ${setSQLStringValue(ProductSubCatId)},
@@ -212,6 +214,7 @@ const updateProduct = async (req, res) => {
         MainDecription2,
         Quantity,
         ProductTag,
+        ProductTagTitle,
         ProductCatId,
         ProductCatTitle,
         ProductSubCatId,
@@ -341,6 +344,7 @@ const updateProduct = async (req, res) => {
                 MainDecription2 = ${setSQLStringValue(MainDecription2)},
                 Quantity = ${setSQLStringValue(Quantity)},
                 ProductTag = ${setSQLStringValue(ProductTag)},
+                ProductTagTitle = ${setSQLStringValue(ProductTagTitle)},
                 ProductCatId = ${setSQLStringValue(ProductCatId)},
                 ProductCatTitle = ${setSQLStringValue(ProductCatTitle)},
                 ProductSubCatId = ${setSQLStringValue(ProductSubCatId)},
