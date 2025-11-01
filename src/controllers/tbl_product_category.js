@@ -12,7 +12,7 @@ const fetchProductCategory = async (req, res) => {
 
         const whereString = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
         const getProductCategoryList = {
-            getQuery: `SELECT * FROM tbl_product_category ${whereString} ORDER BY OrderId ASC, EntryDate DESC`,
+            getQuery: `SELECT * FROM tbl_product_category ${whereString} ORDER BY EntryDate DESC`,
             countQuery: `SELECT COUNT(*) AS totalCount FROM tbl_product_category ${whereString}`,
         };
         const result = await getCommonAPIResponse(req, res, getProductCategoryList);
