@@ -301,7 +301,18 @@ const BrandUpload = multer({ storage: BrandStorage }).fields([
     { name: 'Image', maxCount: 1 },
 ]);
 
+const ProductStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, `./media/Products`);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '_' + file.originalname);
+    }
+});
 
+const ProductUpload = multer({ storage: ProductStorage }).fields([
+    { name: 'Images', maxCount: 10 }, // Allow up to 10 images
+]);
 module.exports = {
     SpeakerUpload,
     SponsorUpload,
@@ -322,5 +333,6 @@ module.exports = {
     CanvasSeatingFileUpload,
     SavedCanvasSeatingFileUpload,
     CarouselUpload,
-    BrandUpload
+    BrandUpload,
+    ProductUpload
 };
