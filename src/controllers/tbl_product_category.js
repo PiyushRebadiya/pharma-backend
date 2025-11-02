@@ -24,7 +24,7 @@ const fetchProductCategory = async (req, res) => {
 }
 
 const createProductCategory = async (req, res) => {
-    const { Title, OrderId, Status = true } = req.body;
+    const { Title, OrderId, Status = true, DashboardView = false } = req.body;
     let transaction;
     try {
         const missingKeys = checkKeysAndRequireValues(['Title'], req.body)
@@ -38,9 +38,9 @@ const createProductCategory = async (req, res) => {
 
         const insertQuery = `
             INSERT INTO tbl_product_category (
-                Title, OrderId, Status
+                Title, OrderId, Status, DashboardView
             ) VALUES (
-                ${setSQLStringValue(Title)}, ${setSQLStringValue(OrderId)}, ${setSQLBooleanValue(Status)}
+                ${setSQLStringValue(Title)}, ${setSQLStringValue(OrderId)}, ${setSQLBooleanValue(Status)}, ${setSQLBooleanValue(DashboardView)}
             )
         `;
         const result = await transaction.request().query(insertQuery);
@@ -64,7 +64,7 @@ const createProductCategory = async (req, res) => {
 }
 
 const updateProductCategory = async (req, res) => {
-    const { ProductCatId, Title, OrderId, Status = true } = req.body;
+    const { ProductCatId, Title, OrderId, Status = true, DashboardView = false } = req.body;
     let transaction;
     try {
         const missingKeys = checkKeysAndRequireValues(['ProductCatId', 'Title'], req.body)
@@ -80,7 +80,8 @@ const updateProductCategory = async (req, res) => {
             UPDATE tbl_product_category SET
                 Title = ${setSQLStringValue(Title)},
                 OrderId = ${setSQLStringValue(OrderId)},
-                Status = ${setSQLBooleanValue(Status)}
+                Status = ${setSQLBooleanValue(Status)},
+                DashboardView = ${setSQLBooleanValue(DashboardView)}
             WHERE ProductCatId = ${setSQLStringValue(ProductCatId)}
         `;
         const result = await transaction.request().query(updateQuery);
