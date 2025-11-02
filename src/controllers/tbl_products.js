@@ -32,10 +32,10 @@ const fetchProduct = async (req, res) => {
         const result = await getCommonAPIResponse(req, res, getProductList);
 
         // If single product fetch, also get images details
-        if (ProductId && result.data && result.data.length > 0) {
+        if (result.data && result.data.length > 0) {
             const imagesQuery = `
-                SELECT * FROM tbl_products_image 
-                WHERE ProductId = ${setSQLStringValue(ProductId)} AND Status = 1
+                SELECT ProductImageId, Image, Thumbnail FROM tbl_products_image 
+                WHERE Status = 1
                 ORDER BY ProductImageId ASC
             `;
             const imagesResult = await pool.request().query(imagesQuery);
