@@ -33,13 +33,15 @@ const fetchProduct = async (req, res) => {
 
         // If single product fetch, also get images details
         if (result.data && result.data.length > 0) {
-            const imagesQuery = `
+            for (let i = 0; i < result.data.length; i++) {
+                const imagesQuery = `
                 SELECT ProductImageId, Image, Thumbnail FROM tbl_products_image 
-                WHERE Status = 1
+                WHERE Status = 1 AND ProductId = ${setSQLStringValue(result.data[i].ProductId)}
                 ORDER BY ProductImageId ASC
             `;
-            const imagesResult = await pool.request().query(imagesQuery);
-            result.data[0].imagesData = imagesResult.recordset;
+                const imagesResult = await pool.request().query(imagesQuery);
+                result.data[i].ImagesData = imagesResult.recordset;
+            }
         }
 
         return res.json(result);
