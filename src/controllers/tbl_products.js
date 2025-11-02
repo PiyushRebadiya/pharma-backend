@@ -39,7 +39,7 @@ const fetchProduct = async (req, res) => {
                 ORDER BY ProductImageId ASC
             `;
             const imagesResult = await pool.request().query(imagesQuery);
-            result.data[0].images = imagesResult.recordset;
+            result.data[0].imagesData = imagesResult.recordset;
         }
 
         return res.json(result);
