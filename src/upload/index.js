@@ -312,7 +312,9 @@ const ProductStorage = multer.diskStorage({
 
 const ProductUpload = multer({ storage: ProductStorage }).fields([
     { name: 'Images', maxCount: 10 }, // Allow up to 10 images
+    { name: 'MainImage', maxCount: 1 }, // Single main image
 ]);
+
 module.exports = {
     SpeakerUpload,
     SponsorUpload,

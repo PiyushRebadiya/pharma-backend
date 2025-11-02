@@ -78,6 +78,7 @@ const createProduct = async (req, res) => {
     let transaction;
     try {
         const Images = req.files?.Images || [];
+        const MainImageFile = req.files?.MainImage ? req.files.MainImage[0] : null;
 
         const missingKeys = checkKeysAndRequireValues(['Title'], req.body);
         if (missingKeys.length > 0) {
@@ -85,20 +86,42 @@ const createProduct = async (req, res) => {
             if (Images.length > 0) {
                 Images.forEach(file => safeUnlink(file.path));
             }
+            if (MainImageFile) {
+                safeUnlink(MainImageFile.path);
+            }
             return res.status(200).json(errorMessage(`${missingKeys.join(', ')} is required`));
+        }
+
+        // Handle Main Image
+        let mainImagePath = null;
+        let mainImageThumbnailPath = null;
+
+        if (MainImageFile) {
+            mainImagePath = MainImageFile.path.replace(/\\/g, '/');
+            
+            // Generate main image thumbnail
+            const thumbnailDir = './media/Products/Thumbnail';
+            const thumbnailFilename = 'main_thumbnail_' + MainImageFile.filename;
+            const thumbnailPath = path.join(thumbnailDir, thumbnailFilename);
+
+            await sharp(MainImageFile.path)
+                .resize(250, 250)
+                .toFile(thumbnailPath);
+
+            mainImageThumbnailPath = `media/Products/Thumbnail/main_thumbnail_${MainImageFile.filename}`;
         }
 
         // Start transaction
         transaction = await pool.transaction();
         await transaction.begin();
 
-        // Insert main product
+        // Insert main product with MainImage fields
         const insertProductQuery = `
             INSERT INTO tbl_products (
                 Title, OriginalPrice, HighPrice, ShortDecription, MainDecription1, 
                 MainDecription2, Quantity, ProductTag, ProductTagTitle, ProductCatId, ProductCatTitle, 
                 ProductSubCatId, ProductSubCatTitle, BrandId, BrandTitle, Combo, 
-                Tranding, OrderId, CommonBulkId, Status
+                Tranding, OrderId, CommonBulkId, Status, MainImage, MainImageThumbnail
             ) VALUES (
                 ${setSQLStringValue(Title)},
                 ${setSQLStringValue(OriginalPrice)},
@@ -119,7 +142,9 @@ const createProduct = async (req, res) => {
                 ${setSQLBooleanValue(Tranding)},
                 ${setSQLStringValue(OrderId)},
                 ${setSQLStringValue(CommonBulkId)},
-                ${setSQLBooleanValue(Status)}
+                ${setSQLBooleanValue(Status)},
+                ${setSQLStringValue(mainImagePath)},
+                ${setSQLStringValue(mainImageThumbnailPath)}
             );
             SELECT SCOPE_IDENTITY() AS ProductId;
         `;
@@ -131,6 +156,12 @@ const createProduct = async (req, res) => {
             await transaction.rollback();
             if (Images.length > 0) {
                 Images.forEach(file => safeUnlink(file.path));
+            }
+            if (MainImageFile) {
+                safeUnlink(MainImageFile.path);
+                if (mainImageThumbnailPath) {
+                    safeUnlink(mainImageThumbnailPath);
+                }
             }
             return res.status(400).json(errorMessage('No Product Created.'));
         }
@@ -197,6 +228,9 @@ const createProduct = async (req, res) => {
         if (req.files?.Images) {
             req.files.Images.forEach(file => safeUnlink(file.path));
         }
+        if (req.files?.MainImage) {
+            req.files.MainImage.forEach(file => safeUnlink(file.path));
+        }
         if (transaction) {
             await transaction.rollback();
         }
@@ -228,18 +262,23 @@ const updateProduct = async (req, res) => {
         OrderId,
         CommonBulkId,
         Status = true,
-        DeleteImageIds = '' // Comma separated image IDs to delete
+        DeleteImageIds = '', // Comma separated image IDs to delete
+        RemoveMainImage = false // Flag to remove main image
     } = req.body;
 
     let transaction;
     try {
         const newImages = req.files?.Images || [];
+        const newMainImageFile = req.files?.MainImage ? req.files.MainImage[0] : null;
 
         // Validate required fields
         const missingKeys = checkKeysAndRequireValues(['ProductId', 'Title'], req.body);
         if (missingKeys.length > 0) {
             if (newImages.length > 0) {
                 newImages.forEach(file => safeUnlink(file.path));
+            }
+            if (newMainImageFile) {
+                safeUnlink(newMainImageFile.path);
             }
             return res.status(200).json(errorMessage(`${missingKeys.join(', ')} is required`));
         }
@@ -248,20 +287,59 @@ const updateProduct = async (req, res) => {
         transaction = await pool.transaction();
         await transaction.begin();
 
-        // Verify product exists
-        const productCheck = await transaction.request().query(
-            `SELECT ProductId FROM tbl_products WHERE ProductId = ${setSQLStringValue(ProductId)}`
-        );
+        // Verify product exists and get current main image paths
+        const productCheck = await transaction.request().query(`
+            SELECT ProductId, MainImage, MainImageThumbnail 
+            FROM tbl_products 
+            WHERE ProductId = ${setSQLStringValue(ProductId)}
+        `);
 
         if (!productCheck.recordset.length) {
             await transaction.rollback();
             if (newImages.length > 0) {
                 newImages.forEach(file => safeUnlink(file.path));
             }
+            if (newMainImageFile) {
+                safeUnlink(newMainImageFile.path);
+            }
             return res.status(400).json(errorMessage('Product not found.'));
         }
 
-        // Handle image deletions
+        const currentProduct = productCheck.recordset[0];
+        
+        // Handle main image update/removal
+        let mainImagePath = currentProduct.MainImage;
+        let mainImageThumbnailPath = currentProduct.MainImageThumbnail;
+
+        if (RemoveMainImage) {
+            // Remove existing main image files
+            if (currentProduct.MainImage) safeUnlink(currentProduct.MainImage);
+            if (currentProduct.MainImageThumbnail) safeUnlink(currentProduct.MainImageThumbnail);
+            mainImagePath = null;
+            mainImageThumbnailPath = null;
+        }
+
+        if (newMainImageFile) {
+            // Remove old main image files if they exist
+            if (currentProduct.MainImage) safeUnlink(currentProduct.MainImage);
+            if (currentProduct.MainImageThumbnail) safeUnlink(currentProduct.MainImageThumbnail);
+
+            // Process new main image
+            mainImagePath = newMainImageFile.path.replace(/\\/g, '/');
+            
+            // Generate new main image thumbnail
+            const thumbnailDir = './media/Products/Thumbnail';
+            const thumbnailFilename = 'main_thumbnail_' + newMainImageFile.filename;
+            const thumbnailPath = path.join(thumbnailDir, thumbnailFilename);
+
+            await sharp(newMainImageFile.path)
+                .resize(250, 250)
+                .toFile(thumbnailPath);
+
+            mainImageThumbnailPath = `media/Products/Thumbnail/main_thumbnail_${newMainImageFile.filename}`;
+        }
+
+        // Handle image deletions (existing code remains same)
         if (DeleteImageIds) {
             const deleteIds = DeleteImageIds.split(',').filter(id => id.trim() !== '');
             if (deleteIds.length > 0) {
@@ -358,7 +436,9 @@ const updateProduct = async (req, res) => {
                 OrderId = ${setSQLStringValue(OrderId)},
                 CommonBulkId = ${setSQLStringValue(CommonBulkId)},
                 Status = ${setSQLBooleanValue(Status)},
-                Images = ${setSQLStringValue(imagesString)}
+                Images = ${setSQLStringValue(imagesString)},
+                MainImage = ${setSQLStringValue(mainImagePath)},
+                MainImageThumbnail = ${setSQLStringValue(mainImageThumbnailPath)}
             WHERE ProductId = ${setSQLStringValue(ProductId)}
         `;
 
@@ -368,6 +448,9 @@ const updateProduct = async (req, res) => {
             await transaction.rollback();
             if (newImages.length > 0) {
                 newImages.forEach(file => safeUnlink(file.path));
+            }
+            if (newMainImageFile) {
+                safeUnlink(newMainImageFile.path);
             }
             return res.status(400).json(errorMessage('No Product Updated.'));
         }
@@ -383,6 +466,9 @@ const updateProduct = async (req, res) => {
         // Clean up uploaded files in case of error
         if (req.files?.Images) {
             req.files.Images.forEach(file => safeUnlink(file.path));
+        }
+        if (req.files?.MainImage) {
+            req.files.MainImage.forEach(file => safeUnlink(file.path));
         }
         if (transaction) await transaction.rollback();
 
@@ -403,6 +489,13 @@ const deleteProduct = async (req, res) => {
         // Start transaction
         transaction = await pool.transaction();
         await transaction.begin();
+
+        // Get product data including main images
+        const productQuery = `
+            SELECT MainImage, MainImageThumbnail FROM tbl_products 
+            WHERE ProductId = ${setSQLStringValue(ProductId)}
+        `;
+        const productData = await transaction.request().query(productQuery);
 
         // Get all product images before deletion
         const imagesQuery = `
@@ -436,6 +529,13 @@ const deleteProduct = async (req, res) => {
             if (image.Image) safeUnlink(image.Image);
             if (image.Thumbnail) safeUnlink(image.Thumbnail);
         });
+
+        // Delete main image files
+        if (productData.recordset.length > 0) {
+            const product = productData.recordset[0];
+            if (product.MainImage) safeUnlink(product.MainImage);
+            if (product.MainImageThumbnail) safeUnlink(product.MainImageThumbnail);
+        }
 
         return res.status(200).json({ ...successMessage('Successfully deleted Product.'), ProductId });
     } catch (error) {
