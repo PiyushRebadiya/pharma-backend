@@ -13,13 +13,19 @@ const ProductController = require('../controllers/tbl_products');
 const auth = require("../middleware/auth");
 
 const { UserUpload, CarouselUpload, BrandUpload, ProductUpload } = require('../upload/index');
+const { requireAdmin, authenticateToken } = require("../middleware/authMiddleware");
+
+
+// Public routes
+router.post('/login', AdminController.loginAdmin);
+
 
 //#region User Master
 router.get("/fetchUserMaster", auth, UserMasterController.fetchUserMaster)
 //#endregion
 
 //#region admin master
-router.get("/admin/list", AdminController.fetchAdmin)
+router.get("/admin/list", authenticateToken, requireAdmin, AdminController.fetchAdmin)
 router.post("/admin/create", AdminController.createAdmin)
 router.put("/admin/update", AdminController.updateAdmin)
 router.delete("/admin/delete", AdminController.deleteAdmin)

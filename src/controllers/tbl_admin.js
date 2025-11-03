@@ -1,5 +1,6 @@
 const { errorMessage, successMessage, checkKeysAndRequireValues, setSQLBooleanValue, getCommonAPIResponse, setSQLStringValue } = require("../common/main");
 const { pool } = require('../sql/connectToDatabase');
+const { generateToken } = require("../utility/jwtUtils");
 
 const fetchAdmin = async (req, res) => {
     try {
@@ -139,9 +140,83 @@ const deleteAdmin = async (req, res) => {
     }
 }
 
+const loginAdmin = async (req, res) => {
+    const { RegisterMobile, Password } = req.body;
+    let transaction;
+
+    try {
+        const missingKeys = checkKeysAndRequireValues(['RegisterMobile', 'Password'], req.body);
+        if (missingKeys.length > 0) {
+            return res.status(200).json(errorMessage(`${missingKeys.join(', ')} is required`));
+        }
+
+        // Start transaction
+        transaction = await pool.transaction();
+        await transaction.begin();
+
+        // Find admin by mobile number
+        const findAdminQuery = `
+            SELECT AdminId, RegisterMobile, Password, Status 
+            FROM tbl_admin 
+            WHERE RegisterMobile = ${setSQLStringValue(RegisterMobile)} AND Status = 1
+        `;
+
+        const result = await transaction.request().query(findAdminQuery);
+
+        if (result.recordset.length === 0) {
+            await transaction.rollback();
+            return res.status(401).json(errorMessage('Invalid mobile number or password'));
+        }
+
+        const admin = result.recordset[0];
+
+        // Verify password (plain text comparison or use simple hash)
+        // Option 1: Plain text comparison (if passwords are stored in plain text)
+        const isPasswordValid = Password === admin.Password;
+        
+        // Option 2: If using simple hash (uncomment below)
+        // const isPasswordValid = comparePassword(Password, admin.Password);
+        
+        if (!isPasswordValid) {
+            await transaction.rollback();
+            return res.status(401).json(errorMessage('Invalid mobile number or password'));
+        }
+
+        // Generate JWT token
+        const tokenPayload = {
+            adminId: admin.AdminId,
+            registerMobile: admin.RegisterMobile,
+            role: 'admin'
+        };
+
+        const token = generateToken(tokenPayload);
+
+        // Commit transaction
+        await transaction.commit();
+
+        return res.status(200).json({
+            ...successMessage('Login successful'),
+            token,
+            admin: {
+                adminId: admin.AdminId,
+                registerMobile: admin.RegisterMobile
+            }
+        });
+
+    } catch (error) {
+        // Rollback transaction in case of error
+        if (transaction) {
+            await transaction.rollback();
+        }
+        console.log('Login Admin Error:', error);
+        return res.status(500).send(errorMessage(error?.message));
+    }
+}
+
 module.exports = {
     fetchAdmin,
     createAdmin,
     updateAdmin,
-    deleteAdmin
+    deleteAdmin,
+    loginAdmin
 }
