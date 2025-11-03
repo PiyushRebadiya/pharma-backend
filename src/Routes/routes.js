@@ -10,6 +10,14 @@ const ProductsReviewController = require('../controllers/tbl_products_review');
 const CarouselController = require('../controllers/tbl_carousel');
 const BrandController = require('../controllers/tbl_brand');
 const ProductController = require('../controllers/tbl_products');
+const { 
+    loginOrSignup,
+    socialLogin,
+    getUserProfile,
+    updateProfile,
+    changePassword
+} = require('../controllers/userController');
+
 const auth = require("../middleware/auth");
 
 const { UserUpload, CarouselUpload, BrandUpload, ProductUpload } = require('../upload/index');
@@ -17,8 +25,18 @@ const { requireAdmin, authenticateToken } = require("../middleware/authMiddlewar
 
 
 // Public routes
-router.post('/login', AdminController.loginAdmin);
+router.post('/admin/login', AdminController.loginAdmin);
 
+// Unified authentication endpoint (handles both login and signup)
+router.post('/user/login', loginOrSignup);
+
+// Social login endpoint (Google Auth style)
+router.post('/user/social-login', socialLogin);
+
+// Protected routes
+router.get('/user/profile', authenticateToken, getUserProfile);
+router.put('/user/profile', authenticateToken, updateProfile);
+router.put('/user/change-password', authenticateToken, changePassword);
 
 //#region User Master
 router.get("/fetchUserMaster", auth, UserMasterController.fetchUserMaster)
