@@ -23,6 +23,78 @@ const fetchProductCategory = async (req, res) => {
     }
 }
 
+const fetchProductCategoryWithSubcategories = async (req, res) => {
+    try {
+        let whereConditions = [];
+
+        whereConditions.push(`c.Status = 1`);
+        whereConditions.push(`s.Status = 1`);
+        whereConditions.push(`c.DashboardView = 1`);
+
+        const whereString = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+        // Modified query to get categories with their subcategories
+        const getProductCategoryList = {
+            getQuery: `SELECT 
+                c.Title AS Category,
+                s.Title AS Subcategory
+            FROM [MyEventZTest].[dbo].[tbl_product_category] c
+            INNER JOIN [MyEventZTest].[dbo].[tbl_product_sub_category] s 
+                ON c.ProductCatId = s.ProductCatId
+            ${whereString}
+            ORDER BY c.Title, s.Title`,
+            countQuery: `SELECT COUNT(*) AS totalCount FROM (
+                SELECT DISTINCT c.ProductCatId 
+                FROM [MyEventZTest].[dbo].[tbl_product_category] c
+                INNER JOIN [MyEventZTest].[dbo].[tbl_product_sub_category] s 
+                    ON c.ProductCatId = s.ProductCatId
+                ${whereString}
+            ) AS distinct_categories`
+        };
+
+        const result = await getCommonAPIResponse(req, res, getProductCategoryList);
+
+        // Transform the flat data into nested category-subcategory structure
+        if (result && result.data) {
+            const transformedData = transformCategoryData(result.data);
+            return res.json({
+                ...result,
+                data: transformedData
+            });
+        }
+
+        return res.json(result);
+
+    } catch (error) {
+        return res.status(400).send(errorMessage(error?.message));
+    }
+}
+
+// Helper function to transform flat data into nested structure
+const transformCategoryData = (flatData) => {
+    const categoryMap = {};
+
+    flatData.forEach(item => {
+        const { Category, Subcategory } = item;
+        
+        if (!categoryMap[Category]) {
+            categoryMap[Category] = {
+                category: Category,
+                subcategories: []
+            };
+        }
+        
+        if (Subcategory && !categoryMap[Category].subcategories.includes(Subcategory)) {
+            categoryMap[Category].subcategories.push(Subcategory);
+        }
+    });
+
+    // Convert the map to array and sort subcategories alphabetically
+    return Object.values(categoryMap).map(cat => ({
+        ...cat,
+        subcategories: cat.subcategories.sort()
+    }));
+}
 const createProductCategory = async (req, res) => {
     const { Title, OrderId, Status = true, DashboardView = false } = req.body;
     let transaction;
@@ -144,5 +216,6 @@ module.exports = {
     fetchProductCategory,
     createProductCategory,
     updateProductCategory,
-    deleteProductCategory
+    deleteProductCategory,
+    fetchProductCategoryWithSubcategories
 }
