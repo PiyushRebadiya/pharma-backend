@@ -5,7 +5,7 @@ const path = require('path');
 
 const fetchProduct = async (req, res) => {
     try {
-        const { Status, ProductId } = req.query;
+        const { Status, ProductId, Combo, Tranding, ProductCatTitle, ProductSubCatTitle, BrandTitle } = req.query;
         let whereConditions = [];
 
         if (Status && setSQLBooleanValue(Status)) {
@@ -15,6 +15,26 @@ const fetchProduct = async (req, res) => {
         if (ProductId) {
             whereConditions.push(`p.ProductId = ${setSQLStringValue(ProductId)}`);
         }
+
+        if (Combo) {
+            whereConditions.push(`p.Combo = ${setSQLStringValue(Combo)}`);
+        }
+
+        if (Tranding) {
+            whereConditions.push(`p.Tranding = ${setSQLStringValue(Tranding)}`);
+        }
+
+        if (ProductCatTitle) {
+            whereConditions.push(`p.ProductCatTitle LIKE '%${ProductCatTitle}%'`);
+        }
+
+        if (ProductSubCatTitle) {
+            whereConditions.push(`p.ProductSubCatTitle LIKE '%${ProductSubCatTitle}%'`);
+        }
+
+        if (BrandTitle) {
+            whereConditions.push(`p.BrandTitle LIKE '%${BrandTitle}%'`);
+        }   
 
         const whereString = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 

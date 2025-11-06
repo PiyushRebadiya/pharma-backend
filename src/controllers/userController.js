@@ -34,7 +34,7 @@ const loginOrSignup = async (req, res) => {
             // Check if user is active
             if (!user.Status) {
                 await transaction.rollback();
-                return res.status(401).json(errorMessage('Your account is deactivated. Please contact support.'));
+                return res.status(400).json(errorMessage('Your account is deactivated. Please contact support.'));
             }
 
             // If password is provided, verify it
@@ -44,7 +44,7 @@ const loginOrSignup = async (req, res) => {
 
                 if (!isPasswordValid) {
                     await transaction.rollback();
-                    return res.status(401).json(errorMessage('Invalid password'));
+                    return res.status(400).json(errorMessage('Invalid password'));
                 }
             }
             // If no password provided, it's like social login - allow access
