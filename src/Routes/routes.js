@@ -118,5 +118,8 @@ router.delete("/product/delete", ProductController.deleteProduct)
 router.post("/product/create_with_generate_image", ProductController.createProductWithGenerateImage)
 //#endregion
 
+//#region landing page API
+router.get("/product_category_with_subcategories", ProductCategoryController.fetchProductCategoryWithSubcategories)
+//#endregion
 
 module.exports = router;
