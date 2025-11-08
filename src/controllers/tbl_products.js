@@ -2,6 +2,8 @@ const { errorMessage, successMessage, checkKeysAndRequireValues, setSQLBooleanVa
 const { pool } = require('../sql/connectToDatabase');
 const sharp = require('sharp');
 const path = require('path');
+const fs = require('fs');
+const axios = require('axios');
 
 const fetchProduct = async (req, res) => {
     try {
@@ -238,6 +240,179 @@ const createProduct = async (req, res) => {
         return res.status(500).send(errorMessage(error?.message));
     }
 }
+
+const createProductWithGenerateImage = async (req, res) => {
+    const {
+        Title,
+        OriginalPrice,
+        HighPrice,
+        ShortDecription,
+        MainDecription1,
+        MainDecription2,
+        Quantity,
+        ProductTag,
+        ProductTagTitle,
+        ProductCatId,
+        ProductCatTitle,
+        ProductSubCatId,
+        ProductSubCatTitle,
+        BrandId,
+        BrandTitle,
+        Combo = false,
+        Tranding = false,
+        OrderId,
+        CommonBulkId,
+        Status = true,
+        Images // 👈 comma-separated URLs
+    } = req.body;
+    console.log("req.body", req.body);
+
+    let transaction;
+    try {
+        const missingKeys = checkKeysAndRequireValues(['Title'], req.body);
+        if (missingKeys.length > 0) {
+            return res.status(200).json(errorMessage(`${missingKeys.join(', ')} is required`));
+        }
+
+        // Ensure local directories exist
+        const productDir = './media/Products';
+        const thumbnailDir = './media/Products/Thumbnail';
+        if (!fs.existsSync(productDir)) fs.mkdirSync(productDir, { recursive: true });
+        if (!fs.existsSync(thumbnailDir)) fs.mkdirSync(thumbnailDir, { recursive: true });
+
+        // Split image URLs
+        const imageList = Images ? Images.split(',').map(i => i.trim()).filter(Boolean) : [];
+
+        // Helper: download image from URL
+        async function downloadImage(url, savePath) {
+            const response = await axios({
+                url,
+                responseType: 'arraybuffer',
+                timeout: 20000
+            });
+            fs.writeFileSync(savePath, response.data);
+        }
+
+        // ---- Generate main image (from first URL) ----
+        // let mainImagePath = null;
+        // let mainImageThumbnailPath = null;
+
+        // if (imageList.length > 0) {
+        //     const firstUrl = imageList[0];
+        //     const fileExt = path.extname(firstUrl).split('?')[0] || '.png';
+        //     const mainName = `main_${Date.now()}${fileExt}`;
+        //     const mainPath = path.join(productDir, mainName);
+
+        //     await downloadImage(firstUrl, mainPath);
+
+        //     const thumbName = `main_thumb_${Date.now()}${fileExt}`;
+        //     const thumbPath = path.join(thumbnailDir, thumbName);
+
+        //     await sharp(mainPath).resize(250, 250).toFile(thumbPath);
+
+        //     mainImagePath = mainPath.replace(/\\/g, '/');
+        //     mainImageThumbnailPath = `media/Products/Thumbnail/${thumbName}`;
+        // }
+
+        // ---- Start transaction ----
+        transaction = await pool.transaction();
+        await transaction.begin();
+
+        // Insert product
+        const insertProductQuery = `
+            INSERT INTO tbl_products (
+                Title, OriginalPrice, HighPrice, ShortDecription, MainDecription1, 
+                MainDecription2, Quantity, ProductTag, ProductTagTitle, ProductCatId, ProductCatTitle, 
+                ProductSubCatId, ProductSubCatTitle, BrandId, BrandTitle, Combo, 
+                Tranding, OrderId, CommonBulkId, Status
+            ) VALUES (
+                ${setSQLStringValue(Title)},
+                ${setSQLStringValue(OriginalPrice)},
+                ${setSQLStringValue(HighPrice)},
+                ${setSQLStringValue(ShortDecription)},
+                ${setSQLStringValue(MainDecription1)},
+                ${setSQLStringValue(MainDecription2)},
+                ${setSQLStringValue(Quantity)},
+                ${setSQLStringValue(ProductTag)},
+                ${setSQLStringValue(ProductTagTitle)},
+                ${setSQLStringValue(ProductCatId)},
+                ${setSQLStringValue(ProductCatTitle)},
+                ${setSQLStringValue(ProductSubCatId)},
+                ${setSQLStringValue(ProductSubCatTitle)},
+                ${setSQLStringValue(BrandId)},
+                ${setSQLStringValue(BrandTitle)},
+                ${setSQLBooleanValue(Combo)},
+                ${setSQLBooleanValue(Tranding)},
+                ${setSQLStringValue(OrderId)},
+                ${setSQLStringValue(CommonBulkId)},
+                ${setSQLBooleanValue(Status)}
+            );
+            SELECT SCOPE_IDENTITY() AS ProductId;
+        `;
+        const productResult = await transaction.request().query(insertProductQuery);
+        const productId = productResult.recordset[0]?.ProductId;
+
+        if (!productId) {
+            await transaction.rollback();
+            return res.status(400).json(errorMessage('No Product Created.'));
+        }
+
+        // ---- Download & store each image ----
+        const imageIds = [];
+        for (const imgUrl of imageList) {
+            const ext = path.extname(imgUrl).split('?')[0] || '.png';
+            const baseName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+            const savePath = path.join(productDir, baseName);
+            const thumbName = `thumb_${baseName}`;
+            const thumbPath = path.join(thumbnailDir, thumbName);
+
+            await downloadImage(imgUrl, savePath);
+            await sharp(savePath).resize(250, 250).toFile(thumbPath);
+
+            const dbImagePath = savePath.replace(/\\/g, '/');
+            const dbThumbPath = `media/Products/Thumbnail/${thumbName}`;
+
+            const insertImageQuery = `
+                INSERT INTO tbl_products_image (Image, Thumbnail, ProductId, Status)
+                VALUES (
+                    ${setSQLStringValue(dbImagePath)},
+                    ${setSQLStringValue(dbThumbPath)},
+                    ${setSQLStringValue(productId)},
+                    ${setSQLBooleanValue(true)}
+                );
+                SELECT SCOPE_IDENTITY() AS ProductImageId;
+            `;
+            const imageResult = await transaction.request().query(insertImageQuery);
+            const imageId = imageResult.recordset[0]?.ProductImageId;
+            if (imageId) imageIds.push(imageId);
+        }
+
+        // Update product's Images field
+        if (imageIds.length > 0) {
+            const updateImagesQuery = `
+                UPDATE tbl_products 
+                SET Images = ${setSQLStringValue(imageIds.join(','))}
+                WHERE ProductId = ${setSQLStringValue(productId)}
+            `;
+            await transaction.request().query(updateImagesQuery);
+        }
+
+        // Commit transaction
+        await transaction.commit();
+
+        return res.status(200).json({
+            ...successMessage('Successfully created Product.'),
+            ProductId: productId,
+            ImageCount: imageIds.length
+        });
+
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        console.log('Create Product Error:', error);
+        return res.status(500).send(errorMessage(error?.message));
+    }
+};
+
 
 const updateProduct = async (req, res) => {
     const {
@@ -583,5 +758,6 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    getProductImages
+    getProductImages,
+    createProductWithGenerateImage
 }

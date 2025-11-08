@@ -115,6 +115,7 @@ router.get("/product/images", ProductController.getProductImages)
 router.post("/product/create", ProductUpload, ProductController.createProduct)
 router.put("/product/update", ProductUpload, ProductController.updateProduct)
 router.delete("/product/delete", ProductController.deleteProduct)
+router.post("/product/create_with_generate_image", ProductController.createProductWithGenerateImage)
 //#endregion
 
 
