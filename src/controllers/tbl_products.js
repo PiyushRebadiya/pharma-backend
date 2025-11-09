@@ -1,4 +1,4 @@
-const { errorMessage, successMessage, checkKeysAndRequireValues, setSQLBooleanValue, getCommonAPIResponse, setSQLStringValue, safeUnlink } = require("../common/main");
+const { errorMessage, successMessage, checkKeysAndRequireValues, setSQLBooleanValue, getCommonAPIResponse, setSQLStringValue, safeUnlink, setSQLOrderId } = require("../common/main");
 const { pool } = require('../sql/connectToDatabase');
 const sharp = require('sharp');
 const path = require('path');
@@ -285,7 +285,6 @@ const createProductWithGenerateImage = async (req, res) => {
         Status = true,
         Images // 👈 comma-separated URLs
     } = req.body;
-    console.log("req.body", req.body);
 
     let transaction;
     try {
@@ -355,15 +354,15 @@ const createProductWithGenerateImage = async (req, res) => {
                 ${setSQLStringValue(Quantity)},
                 ${setSQLStringValue(ProductTag)},
                 ${setSQLStringValue(ProductTagTitle)},
-                ${setSQLStringValue(ProductCatId)},
+                ${setSQLOrderId(ProductCatId)},
                 ${setSQLStringValue(ProductCatTitle)},
-                ${setSQLStringValue(ProductSubCatId)},
+                ${setSQLOrderId(ProductSubCatId)},
                 ${setSQLStringValue(ProductSubCatTitle)},
-                ${setSQLStringValue(BrandId)},
+                ${setSQLOrderId(BrandId)},
                 ${setSQLStringValue(BrandTitle)},
                 ${setSQLBooleanValue(Combo)},
                 ${setSQLBooleanValue(Tranding)},
-                ${setSQLStringValue(OrderId)},
+                ${setSQLOrderId(OrderId)},
                 ${setSQLStringValue(CommonBulkId)},
                 ${setSQLBooleanValue(Status)}
             );
